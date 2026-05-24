@@ -1,0 +1,1066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no"/>
+<title>NEON DRIFT</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@300;400;600&display=swap" rel="stylesheet"/>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+html,body{width:100%;height:100%;overflow:hidden;background:#000}
+body{display:flex;align-items:center;justify-content:center;font-family:'Rajdhani',sans-serif}
+
+#app{
+  position:relative;
+  width:100%;
+  max-width:480px;
+  height:100svh;
+  overflow:hidden;
+}
+
+canvas{
+  position:absolute;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* ── SCREENS ── */
+.screen{
+  position:absolute;inset:0;
+  display:flex;flex-direction:column;
+  align-items:center;justify-content:center;
+  transition:opacity .4s,transform .4s;
+  z-index:10;
+  padding:20px;
+}
+.screen.hidden{opacity:0;pointer-events:none;transform:scale(.96)}
+
+/* ── GLASSMORPHISM CARD ── */
+.glass{
+  background:rgba(5,5,20,.65);
+  backdrop-filter:blur(24px);
+  -webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:20px;
+  padding:32px 28px;
+  width:100%;
+  max-width:340px;
+  box-shadow:0 0 60px rgba(0,0,0,.6),inset 0 1px 0 rgba(255,255,255,.06);
+}
+
+/* ── LOGO ── */
+.logo{
+  font-family:'Orbitron',sans-serif;
+  font-weight:900;
+  font-size:clamp(2.6rem,10vw,3.4rem);
+  letter-spacing:.12em;
+  line-height:1;
+  text-align:center;
+  margin-bottom:4px;
+}
+.logo-neon{ color:#fff; text-shadow:0 0 10px #ff2fff,0 0 30px #ff2fff,0 0 70px #c000ff; }
+.logo-drift{ color:#00f7ff; text-shadow:0 0 10px #00f7ff,0 0 30px #00f7ff,0 0 80px #0080ff; }
+
+.tagline{
+  font-size:.72rem;letter-spacing:.38em;
+  color:rgba(255,255,255,.3);text-align:center;
+  margin-bottom:36px;text-transform:uppercase;
+}
+
+/* ── THEME SELECTOR ── */
+.theme-row{
+  display:flex;gap:10px;justify-content:center;
+  margin-bottom:28px;
+}
+.theme-dot{
+  width:34px;height:34px;border-radius:50%;
+  border:2px solid transparent;
+  cursor:pointer;
+  transition:transform .2s,box-shadow .2s;
+  position:relative;
+}
+.theme-dot:hover{transform:scale(1.15)}
+.theme-dot.active{border-color:#fff;box-shadow:0 0 12px currentColor}
+.theme-dot[data-t="cyber"]{background:radial-gradient(#ff2fff,#7700ff);color:#ff2fff}
+.theme-dot[data-t="space"]{background:radial-gradient(#00f7ff,#0033ff);color:#00f7ff}
+.theme-dot[data-t="vapor"]{background:radial-gradient(#ff6ec7,#ff9a3c);color:#ff6ec7}
+.theme-dot[data-t="matrix"]{background:radial-gradient(#00ff88,#006622);color:#00ff88}
+.theme-dot[data-t="blood"]{background:radial-gradient(#ff4444,#660000);color:#ff4444}
+
+.theme-label{
+  text-align:center;font-size:.6rem;letter-spacing:.3em;
+  color:rgba(255,255,255,.35);margin-bottom:20px;
+  text-transform:uppercase;
+}
+
+/* ── BUTTONS ── */
+.btn-play{
+  width:100%;padding:17px;
+  font-family:'Orbitron',sans-serif;
+  font-size:.9rem;font-weight:700;letter-spacing:.25em;
+  border:none;border-radius:12px;
+  cursor:pointer;
+  position:relative;overflow:hidden;
+  transition:transform .15s,box-shadow .15s;
+  color:#000;
+}
+.btn-play:active{transform:scale(.97)}
+.btn-play::after{
+  content:'';position:absolute;inset:0;
+  background:rgba(255,255,255,.15);
+  opacity:0;transition:opacity .2s;
+}
+.btn-play:hover::after{opacity:1}
+
+.btn-small{
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.7);
+  font-family:'Rajdhani',sans-serif;
+  font-size:.78rem;letter-spacing:.2em;
+  padding:11px 24px;border-radius:8px;
+  cursor:pointer;margin-top:10px;
+  transition:all .2s;text-transform:uppercase;
+  width:100%;
+}
+.btn-small:hover{background:rgba(255,255,255,.12);color:#fff}
+
+/* ── HUD ── */
+#hud{
+  position:absolute;top:0;left:0;right:0;
+  padding:18px 20px 0;
+  display:flex;justify-content:space-between;align-items:flex-start;
+  z-index:5;pointer-events:none;
+}
+.hud-item{text-align:center}
+.hud-label{font-size:.52rem;letter-spacing:.3em;color:rgba(255,255,255,.3);text-transform:uppercase}
+.hud-val{
+  font-family:'Orbitron',sans-serif;font-size:1.3rem;font-weight:700;
+  color:#fff;line-height:1;margin-top:2px;
+}
+#hud-score-val{text-shadow:0 0 12px currentColor}
+
+/* ── MULTIPLIER ── */
+#multiplier{
+  position:absolute;top:80px;left:50%;transform:translateX(-50%);
+  font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;
+  letter-spacing:.1em;padding:4px 14px;border-radius:20px;
+  background:rgba(0,0,0,.4);border:1px solid rgba(255,255,255,.15);
+  z-index:5;pointer-events:none;
+  transition:opacity .3s;color:#fff;
+  opacity:0;
+}
+#multiplier.show{opacity:1}
+
+/* ── HOLD HINT ── */
+#hint{
+  position:absolute;bottom:100px;left:50%;transform:translateX(-50%);
+  text-align:center;z-index:5;pointer-events:none;
+  opacity:1;transition:opacity .5s;
+}
+#hint.gone{opacity:0}
+.hint-text{font-size:.65rem;letter-spacing:.25em;color:rgba(255,255,255,.4);text-transform:uppercase}
+.hint-arrows{font-size:1.4rem;margin-top:4px;animation:hintPulse 1.5s infinite}
+@keyframes hintPulse{0%,100%{opacity:.4}50%{opacity:1}}
+
+/* ── GAME OVER ── */
+.go-score-label{font-size:.6rem;letter-spacing:.35em;color:rgba(255,255,255,.35);text-transform:uppercase;text-align:center;margin-bottom:4px}
+.go-score-val{
+  font-family:'Orbitron',sans-serif;font-size:3rem;font-weight:900;
+  text-align:center;line-height:1;margin-bottom:4px;
+}
+.go-best{font-size:.65rem;letter-spacing:.2em;color:rgba(255,255,255,.35);text-align:center;margin-bottom:28px}
+.go-best span{color:rgba(255,255,255,.7)}
+.go-stats{display:flex;gap:1px;margin-bottom:28px;border-radius:10px;overflow:hidden}
+.go-stat{flex:1;background:rgba(255,255,255,.05);padding:12px 8px;text-align:center}
+.go-stat-l{font-size:.5rem;letter-spacing:.2em;color:rgba(255,255,255,.3);text-transform:uppercase;margin-bottom:3px}
+.go-stat-v{font-family:'Orbitron',sans-serif;font-size:.9rem;font-weight:700;color:rgba(255,255,255,.8)}
+
+/* ── NEW BEST BADGE ── */
+.new-best{
+  display:inline-block;padding:3px 10px;border-radius:20px;
+  font-size:.55rem;letter-spacing:.2em;text-transform:uppercase;
+  font-weight:700;margin-bottom:20px;
+  animation:badgePop .4s cubic-bezier(.18,.89,.32,1.28) both;
+}
+@keyframes badgePop{from{transform:scale(0);opacity:0}to{transform:scale(1);opacity:1}}
+
+/* ── PAUSE ── */
+#pauseBtn{
+  position:absolute;top:18px;right:20px;
+  z-index:6;background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  color:rgba(255,255,255,.6);font-size:.85rem;
+  width:36px;height:36px;border-radius:8px;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  transition:all .2s;
+}
+#pauseBtn:hover{background:rgba(255,255,255,.15)}
+#pauseBtn.hidden{display:none}
+
+/* ── SCANLINES ── */
+body::after{
+  content:'';position:fixed;inset:0;
+  background:repeating-linear-gradient(0deg,transparent 0px,transparent 3px,rgba(0,0,0,.08) 3px,rgba(0,0,0,.08) 4px);
+  pointer-events:none;z-index:999;
+}
+
+/* ── STREAK FLASH ── */
+.streak-flash{
+  position:absolute;inset:0;pointer-events:none;z-index:4;
+  animation:streakFlash .35s ease forwards;
+  opacity:0;
+}
+@keyframes streakFlash{0%{opacity:.4}100%{opacity:0}}
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- CANVAS -->
+  <canvas id="c"></canvas>
+
+  <!-- HUD (visible during play) -->
+  <div id="hud" class="hidden">
+    <div class="hud-item">
+      <div class="hud-label">Score</div>
+      <div class="hud-val" id="hud-score-val">0</div>
+    </div>
+    <div class="hud-item" style="text-align:center">
+      <div class="hud-label">Best</div>
+      <div class="hud-val" id="hud-best-val" style="font-size:.95rem;color:rgba(255,255,255,.4)">0</div>
+    </div>
+    <div class="hud-item" style="text-align:right">
+      <div class="hud-label">Speed</div>
+      <div class="hud-val" id="hud-speed-val">1</div>
+    </div>
+  </div>
+
+  <div id="multiplier">×2</div>
+  <button id="pauseBtn" class="hidden">⏸</button>
+
+  <!-- HOLD HINT -->
+  <div id="hint" class="gone">
+    <div class="hint-text">Hold to go right · Release to go left</div>
+    <div class="hint-arrows">← →</div>
+  </div>
+
+  <!-- ══ MAIN MENU ══ -->
+  <div class="screen" id="s-menu">
+    <div class="glass">
+      <div class="logo"><span class="logo-neon">NEON</span><br><span class="logo-drift">DRIFT</span></div>
+      <div class="tagline">Endless · Arcade · Synthwave</div>
+
+      <div class="theme-label">Choose Theme</div>
+      <div class="theme-row">
+        <div class="theme-dot active" data-t="cyber" title="Cyberpunk"></div>
+        <div class="theme-dot" data-t="space" title="Space"></div>
+        <div class="theme-dot" data-t="vapor" title="Vaporwave"></div>
+        <div class="theme-dot" data-t="matrix" title="Matrix"></div>
+        <div class="theme-dot" data-t="blood" title="Blood Moon"></div>
+      </div>
+
+      <button class="btn-play" id="btnPlay">▶ &nbsp; PLAY</button>
+      <button class="btn-small" id="btnHowTo">HOW TO PLAY</button>
+    </div>
+  </div>
+
+  <!-- ══ HOW TO PLAY ══ -->
+  <div class="screen hidden" id="s-how">
+    <div class="glass">
+      <div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;text-align:center;letter-spacing:.2em;color:#fff;margin-bottom:24px">HOW TO PLAY</div>
+      <div style="display:flex;flex-direction:column;gap:14px;margin-bottom:28px">
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">👆</div>
+          <div><div style="font-size:.9rem;color:#fff;font-weight:600">Hold Screen / Key</div><div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px">Ball drifts RIGHT</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">✋</div>
+          <div><div style="font-size:.9rem;color:#fff;font-weight:600">Release</div><div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px">Ball drifts LEFT</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">💥</div>
+          <div><div style="font-size:.9rem;color:#fff;font-weight:600">Avoid Obstacles</div><div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px">Touch = Game Over</div></div>
+        </div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <div style="width:44px;height:44px;border-radius:10px;background:rgba(255,255,255,.07);display:flex;align-items:center;justify-content:center;font-size:1.3rem;flex-shrink:0">⚡</div>
+          <div><div style="font-size:.9rem;color:#fff;font-weight:600">Speed Increases</div><div style="font-size:.72rem;color:rgba(255,255,255,.4);margin-top:2px">Survive longer for more points</div></div>
+        </div>
+      </div>
+      <button class="btn-play" id="btnHowBack">GOT IT</button>
+    </div>
+  </div>
+
+  <!-- ══ GAME OVER ══ -->
+  <div class="screen hidden" id="s-over">
+    <div class="glass">
+      <div style="font-family:'Orbitron',sans-serif;font-size:.75rem;font-weight:700;text-align:center;letter-spacing:.35em;color:rgba(255,255,255,.35);margin-bottom:14px">GAME OVER</div>
+      <div id="newBestBadge" class="new-best hidden"></div>
+      <div class="go-score-label">Score</div>
+      <div class="go-score-val" id="go-score">0</div>
+      <div class="go-best">Best: <span id="go-best">0</span></div>
+      <div class="go-stats">
+        <div class="go-stat"><div class="go-stat-l">Time</div><div class="go-stat-v" id="go-time">0s</div></div>
+        <div class="go-stat"><div class="go-stat-l">Dodged</div><div class="go-stat-v" id="go-dodged">0</div></div>
+        <div class="go-stat"><div class="go-stat-l">Max Speed</div><div class="go-stat-v" id="go-spd">1</div></div>
+      </div>
+      <button class="btn-play" id="btnRetry">↩ &nbsp; RETRY</button>
+      <button class="btn-small" id="btnMenuFromOver">MAIN MENU</button>
+    </div>
+  </div>
+
+  <!-- ══ PAUSE ══ -->
+  <div class="screen hidden" id="s-pause">
+    <div class="glass" style="text-align:center">
+      <div style="font-family:'Orbitron',sans-serif;font-size:1rem;font-weight:700;letter-spacing:.3em;color:#fff;margin-bottom:6px">PAUSED</div>
+      <div style="font-size:.65rem;letter-spacing:.25em;color:rgba(255,255,255,.3);margin-bottom:28px;text-transform:uppercase">Game in progress</div>
+      <button class="btn-play" id="btnResume">▶ &nbsp; RESUME</button>
+      <button class="btn-small" id="btnMenuFromPause">MAIN MENU</button>
+    </div>
+  </div>
+
+</div><!-- #app -->
+
+<script>
+(()=>{
+"use strict";
+
+// ── THEMES ──
+const THEMES = {
+  cyber:{
+    ball:'#ff2fff', ballGlow:'#c000ff',
+    trail:['#ff2fff','#c000ff','#7700ff'],
+    obstacle:'#ff2fff', obstacleGlow:'#ff00aa',
+    path:'rgba(120,0,255,.18)', pathEdge:'rgba(200,0,255,.5)',
+    bg1:'#07000f', bg2:'#120020',
+    grid:'rgba(180,0,255,.07)',
+    particle:['#ff2fff','#c000ff','#ff80ff'],
+    scoreColor:'#ff2fff', speedColor:'#c000ff',
+    btnGrad:'linear-gradient(135deg,#ff2fff,#7700ff)',
+    starsColor:'rgba(220,150,255,.6)',
+  },
+  space:{
+    ball:'#00f7ff', ballGlow:'#0080ff',
+    trail:['#00f7ff','#0050ff','#7700ff'],
+    obstacle:'#00f7ff', obstacleGlow:'#0040ff',
+    path:'rgba(0,80,255,.15)', pathEdge:'rgba(0,180,255,.5)',
+    bg1:'#00020f', bg2:'#000820',
+    grid:'rgba(0,100,255,.07)',
+    particle:['#00f7ff','#0080ff','#80ddff'],
+    scoreColor:'#00f7ff', speedColor:'#0080ff',
+    btnGrad:'linear-gradient(135deg,#00f7ff,#0030ff)',
+    starsColor:'rgba(150,200,255,.7)',
+  },
+  vapor:{
+    ball:'#ff6ec7', ballGlow:'#ff3a9d',
+    trail:['#ff6ec7','#ff9a3c','#ffeb3b'],
+    obstacle:'#ff6ec7', obstacleGlow:'#ff9a3c',
+    path:'rgba(255,80,150,.12)', pathEdge:'rgba(255,150,80,.5)',
+    bg1:'#120008', bg2:'#200010',
+    grid:'rgba(255,80,180,.06)',
+    particle:['#ff6ec7','#ff9a3c','#ffeb3b'],
+    scoreColor:'#ff6ec7', speedColor:'#ff9a3c',
+    btnGrad:'linear-gradient(135deg,#ff6ec7,#ff9a3c)',
+    starsColor:'rgba(255,200,230,.5)',
+  },
+  matrix:{
+    ball:'#00ff88', ballGlow:'#00cc44',
+    trail:['#00ff88','#00cc44','#009922'],
+    obstacle:'#00ff88', obstacleGlow:'#00cc44',
+    path:'rgba(0,200,80,.12)', pathEdge:'rgba(0,255,100,.4)',
+    bg1:'#000a02', bg2:'#001508',
+    grid:'rgba(0,200,60,.07)',
+    particle:['#00ff88','#00cc44','#80ffbb'],
+    scoreColor:'#00ff88', speedColor:'#00cc44',
+    btnGrad:'linear-gradient(135deg,#00ff88,#006622)',
+    starsColor:'rgba(150,255,180,.5)',
+  },
+  blood:{
+    ball:'#ff4444', ballGlow:'#cc0000',
+    trail:['#ff4444','#cc0000','#660000'],
+    obstacle:'#ff4444', obstacleGlow:'#cc0000',
+    path:'rgba(200,0,0,.15)', pathEdge:'rgba(255,40,40,.5)',
+    bg1:'#0a0000', bg2:'#1a0000',
+    grid:'rgba(200,0,0,.07)',
+    particle:['#ff4444','#ff8888','#cc0000'],
+    scoreColor:'#ff4444', speedColor:'#cc0000',
+    btnGrad:'linear-gradient(135deg,#ff4444,#660000)',
+    starsColor:'rgba(255,150,150,.5)',
+  }
+};
+
+let currentTheme = 'cyber';
+
+// ── CANVAS SETUP ──
+const app  = document.getElementById('app');
+const canvas = document.getElementById('c');
+const ctx  = canvas.getContext('2d');
+let W, H;
+
+function resize(){
+  const r = app.getBoundingClientRect();
+  W = canvas.width  = r.width;
+  H = canvas.height = r.height;
+}
+resize();
+window.addEventListener('resize', ()=>{ resize(); if(state==='play') drawBackground(); });
+
+// ── STATE ──
+let state = 'menu'; // menu | play | over | pause
+let held = false;
+let score = 0;
+let best  = parseInt(localStorage.getItem('nd_best')||'0');
+let speed = 1;
+let frameCount = 0;
+let gameTime = 0;
+let dodged = 0;
+let maxSpeed = 1;
+let multiplier = 1;
+let nearMissTimer = 0;
+let shakeTimer = 0, shakeAmt = 0;
+let raf;
+let lastTime = 0;
+
+// ── BALL ──
+const ball = { x:0, y:0, r:10, vx:0, vy:0 };
+const BALL_Y_FRAC = 0.72;
+const PATH_W = ()=> W * .55;
+const PATH_X = ()=> W * .5;
+
+// ── TRAIL ──
+const trail = [];
+const TRAIL_MAX = 28;
+
+// ── PARTICLES ──
+const particles = [];
+
+// ── OBSTACLES ──
+const obstacles = [];
+let obstacleTimer = 0;
+
+// ── STARS ──
+const stars = [];
+function initStars(){
+  stars.length = 0;
+  for(let i=0;i<120;i++){
+    stars.push({ x:Math.random()*W, y:Math.random()*H, r:Math.random()*.8+.2, s:Math.random()*.4+.2, b:Math.random() });
+  }
+}
+
+// ── GRID LINES (perspective path) ──
+const gridLines = [];
+function initGrid(){
+  gridLines.length = 0;
+  for(let i=0;i<20;i++){
+    gridLines.push({ z: i/20 });
+  }
+}
+
+// ── APPLY THEME ──
+function applyTheme(t){
+  currentTheme = t;
+  const th = THEMES[t];
+  document.querySelectorAll('.btn-play').forEach(b=>b.style.background=th.btnGrad);
+  document.getElementById('hud-score-val').style.color = th.scoreColor;
+  document.getElementById('hud-score-val').style.textShadow = `0 0 14px ${th.scoreColor}`;
+  document.getElementById('hud-speed-val').style.color = th.speedColor;
+  document.getElementById('multiplier').style.color = th.scoreColor;
+  document.getElementById('multiplier').style.borderColor = `${th.scoreColor}44`;
+}
+
+// ── SCREENS ──
+function showScreen(id){
+  document.querySelectorAll('.screen').forEach(s=>s.classList.add('hidden'));
+  if(id) document.getElementById(id).classList.remove('hidden');
+}
+
+function showHUD(v){
+  document.getElementById('hud').classList.toggle('hidden',!v);
+  document.getElementById('pauseBtn').classList.toggle('hidden',!v);
+}
+
+// ── INIT GAME ──
+function initGame(){
+  resize();
+  ball.x = PATH_X();
+  ball.y = H * BALL_Y_FRAC;
+  ball.vx = 0; ball.vy = 0;
+  trail.length = 0;
+  particles.length = 0;
+  obstacles.length = 0;
+  obstacleTimer = 0;
+  score = 0;
+  speed = 1;
+  frameCount = 0;
+  gameTime = 0;
+  dodged = 0;
+  maxSpeed = 1;
+  multiplier = 1;
+  nearMissTimer = 0;
+  shakeTimer = 0;
+  held = false;
+  initStars();
+  initGrid();
+  document.getElementById('hud-score-val').textContent = '0';
+  document.getElementById('hud-best-val').textContent = best;
+  document.getElementById('hud-speed-val').textContent = '1';
+  document.getElementById('hint').classList.remove('gone');
+}
+
+// ── SPAWN OBSTACLE ──
+function spawnObstacle(){
+  const th = THEMES[currentTheme];
+  const pw = PATH_W();
+  const px = PATH_X();
+  const minW = 28, maxW = pw * .42;
+  const w = minW + Math.random()*(maxW-minW);
+  // Gap position: left side, right side, or center gap
+  const gapType = Math.random();
+  let x;
+  if(gapType < .45){
+    // gap on left — obstacle on right
+    x = px + (pw*.5 - w) * (.2 + Math.random()*.6);
+  } else if(gapType < .9){
+    // gap on right — obstacle on left
+    x = px - pw*.5 + (pw*.5 - w) * (.2 + Math.random()*.6) * 0;
+    x = px - pw*.5 + Math.random()*(pw*.5 - w);
+  } else {
+    // two obstacles (harder)
+    const w2 = minW + Math.random()*(maxW*.6-minW);
+    obstacles.push({
+      x: px - pw*.5 + 4,
+      y: -20, w:w2, h:14+Math.random()*8,
+      speed: speed, alive:true
+    });
+    x = px + pw*.1 + Math.random()*(pw*.35);
+  }
+  obstacles.push({
+    x, y:-20,
+    w, h:14+Math.random()*8,
+    speed, alive:true
+  });
+}
+
+// ── PARTICLES ──
+function burst(x,y,count,color){
+  for(let i=0;i<count;i++){
+    const angle = Math.random()*Math.PI*2;
+    const spd   = 1.5+Math.random()*4;
+    particles.push({
+      x,y,
+      vx:Math.cos(angle)*spd,
+      vy:Math.sin(angle)*spd,
+      r:1.5+Math.random()*3,
+      life:1, decay:.03+Math.random()*.03,
+      color, blur:6+Math.random()*8
+    });
+  }
+}
+
+// ── SCREEN SHAKE ──
+function shake(amt,dur){ shakeAmt=amt; shakeTimer=dur; }
+
+// ── DRAW BACKGROUND ──
+function drawBackground(){
+  const th = THEMES[currentTheme];
+  // gradient bg
+  const grad = ctx.createLinearGradient(0,0,0,H);
+  grad.addColorStop(0, th.bg1);
+  grad.addColorStop(1, th.bg2);
+  ctx.fillStyle = grad;
+  ctx.fillRect(0,0,W,H);
+
+  // stars
+  ctx.save();
+  stars.forEach(s=>{
+    const a = (.3+s.b*.5)*(1-s.s*.2);
+    ctx.globalAlpha = a;
+    ctx.fillStyle = th.starsColor;
+    ctx.shadowColor = th.starsColor;
+    ctx.shadowBlur = 4;
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI*2);
+    ctx.fill();
+  });
+  ctx.restore();
+
+  // perspective grid
+  drawGrid();
+}
+
+function drawGrid(){
+  const th = THEMES[currentTheme];
+  const vp = { x:W/2, y:H*.35 }; // vanishing point
+  const pw = PATH_W();
+  const px = PATH_X();
+  const fLeft  = px - pw/2;
+  const fRight = px + pw/2;
+
+  ctx.save();
+  ctx.strokeStyle = th.pathEdge;
+  ctx.lineWidth = 1.5;
+  ctx.shadowColor = th.pathEdge;
+  ctx.shadowBlur = 8;
+
+  // path edges
+  ctx.beginPath();
+  ctx.moveTo(vp.x, vp.y);
+  ctx.lineTo(fLeft, H+20);
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(vp.x, vp.y);
+  ctx.lineTo(fRight, H+20);
+  ctx.stroke();
+
+  // horizontal grid lines (scrolling)
+  const scroll = (frameCount * speed * .5) % (H / 8);
+  ctx.shadowBlur = 3;
+  ctx.strokeStyle = th.grid.replace('.07','.15');
+  ctx.lineWidth = .8;
+  for(let i=0;i<10;i++){
+    const fy = vp.y + (H - vp.y) * ((i/9) + scroll/(H)) ;
+    const t  = (fy - vp.y) / (H - vp.y);
+    const lx = vp.x + (fLeft  - vp.x) * t;
+    const rx = vp.x + (fRight - vp.x) * t;
+    if(fy > vp.y && fy < H+10){
+      ctx.beginPath();
+      ctx.moveTo(lx, fy);
+      ctx.lineTo(rx, fy);
+      ctx.stroke();
+    }
+  }
+  ctx.restore();
+}
+
+// ── DRAW TRAIL ──
+function drawTrail(){
+  const th = THEMES[currentTheme];
+  if(trail.length < 2) return;
+  for(let i=1;i<trail.length;i++){
+    const t = i/trail.length;
+    const alpha = t*.7;
+    const r = ball.r * t * .8;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.shadowColor = th.ballGlow;
+    ctx.shadowBlur = 18 * t;
+    const ci = Math.floor(t*(th.trail.length-1));
+    ctx.fillStyle = th.trail[ci];
+    ctx.beginPath();
+    ctx.arc(trail[i].x, trail[i].y, r, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+}
+
+// ── DRAW BALL ──
+function drawBall(){
+  const th = THEMES[currentTheme];
+
+  // outer glow rings
+  for(let i=3;i>=1;i--){
+    ctx.save();
+    ctx.globalAlpha = .06 * i;
+    ctx.shadowColor = th.ballGlow;
+    ctx.shadowBlur  = 30;
+    ctx.fillStyle   = th.ballGlow;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.r + i*7, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  // glow halo
+  const grad = ctx.createRadialGradient(ball.x,ball.y,0,ball.x,ball.y,ball.r*2.5);
+  grad.addColorStop(0, th.ball);
+  grad.addColorStop(.5,th.ballGlow+'99');
+  grad.addColorStop(1,'transparent');
+  ctx.save();
+  ctx.globalAlpha = .5;
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,ball.r*2.5,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+
+  // core
+  ctx.save();
+  ctx.shadowColor = th.ball;
+  ctx.shadowBlur  = 20;
+  ctx.fillStyle   = th.ball;
+  ctx.beginPath();
+  ctx.arc(ball.x,ball.y,ball.r,0,Math.PI*2);
+  ctx.fill();
+
+  // specular
+  ctx.fillStyle = 'rgba(255,255,255,.6)';
+  ctx.beginPath();
+  ctx.arc(ball.x-ball.r*.3,ball.y-ball.r*.35,ball.r*.32,0,Math.PI*2);
+  ctx.fill();
+  ctx.restore();
+}
+
+// ── DRAW OBSTACLES ──
+function drawObstacles(){
+  const th = THEMES[currentTheme];
+  obstacles.forEach(ob=>{
+    if(!ob.alive) return;
+    ctx.save();
+    ctx.shadowColor = th.obstacleGlow;
+    ctx.shadowBlur  = 18;
+
+    // body with gradient
+    const og = ctx.createLinearGradient(ob.x,ob.y,ob.x+ob.w,ob.y+ob.h);
+    og.addColorStop(0,th.obstacle);
+    og.addColorStop(1,th.obstacleGlow);
+    ctx.fillStyle = og;
+    roundRect(ctx,ob.x,ob.y,ob.w,ob.h,4);
+    ctx.fill();
+
+    // top edge highlight
+    ctx.shadowBlur = 0;
+    ctx.strokeStyle='rgba(255,255,255,.3)';
+    ctx.lineWidth=1;
+    ctx.beginPath();
+    ctx.moveTo(ob.x+4,ob.y+1);
+    ctx.lineTo(ob.x+ob.w-4,ob.y+1);
+    ctx.stroke();
+    ctx.restore();
+  });
+}
+
+// ── DRAW PARTICLES ──
+function drawParticles(){
+  particles.forEach(p=>{
+    ctx.save();
+    ctx.globalAlpha = p.life*.85;
+    ctx.shadowColor = p.color;
+    ctx.shadowBlur  = p.blur;
+    ctx.fillStyle   = p.color;
+    ctx.beginPath();
+    ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  });
+}
+
+// ── ROUNDRECT ──
+function roundRect(ctx,x,y,w,h,r){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.arcTo(x+w,y,x+w,y+r,r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.arcTo(x+w,y+h,x+w-r,y+h,r);
+  ctx.lineTo(x+r,y+h);
+  ctx.arcTo(x,y+h,x,y+h-r,r);
+  ctx.lineTo(x,y+r);
+  ctx.arcTo(x,y,x+r,y,r);
+  ctx.closePath();
+}
+
+// ── COLLISION ──
+function circleRect(cx,cy,cr,rx,ry,rw,rh){
+  const nearX = Math.max(rx,Math.min(cx,rx+rw));
+  const nearY = Math.max(ry,Math.min(cy,ry+rh));
+  const dx=cx-nearX, dy=cy-nearY;
+  return dx*dx+dy*dy < cr*cr;
+}
+
+// ── MAIN GAME LOOP ──
+function gameLoop(ts){
+  if(state!=='play'){ return; }
+  raf = requestAnimationFrame(gameLoop);
+
+  const dt = Math.min((ts-lastTime)/16.67, 3);
+  lastTime = ts;
+  frameCount++;
+  gameTime += dt/60;
+
+  // ── UPDATE ──
+  const pw  = PATH_W();
+  const px  = PATH_X();
+  const th  = THEMES[currentTheme];
+
+  // speed ramp
+  speed    = 1 + gameTime * .08;
+  maxSpeed = Math.max(maxSpeed, speed);
+  const spLabel = Math.floor(speed);
+  document.getElementById('hud-speed-val').textContent = spLabel;
+
+  // ball physics
+  const ACCEL = 2.8;
+  const MAX_VX = 4.5;
+  if(held) ball.vx += ACCEL * dt * .1;
+  else     ball.vx -= ACCEL * dt * .1;
+  ball.vx = Math.max(-MAX_VX, Math.min(MAX_VX, ball.vx));
+
+  // near miss slow-mo
+  if(nearMissTimer > 0){
+    nearMissTimer -= dt;
+    ball.x += ball.vx * .4;
+  } else {
+    ball.x += ball.vx;
+  }
+
+  // clamp to path
+  const left  = px - pw/2 + ball.r + 2;
+  const right = px + pw/2 - ball.r - 2;
+  if(ball.x < left)  { ball.x = left;  ball.vx = Math.abs(ball.vx)*.3; }
+  if(ball.x > right) { ball.x = right; ball.vx = -Math.abs(ball.vx)*.3; }
+
+  // trail
+  trail.unshift({x:ball.x, y:ball.y});
+  if(trail.length > TRAIL_MAX) trail.pop();
+
+  // obstacles
+  obstacleTimer -= dt;
+  const interval = Math.max(28, 80 - speed * 5);
+  if(obstacleTimer <= 0){ spawnObstacle(); obstacleTimer = interval; }
+
+  let nearMiss = false;
+  obstacles.forEach(ob=>{
+    if(!ob.alive) return;
+    ob.y += speed * 3.5 * dt;
+
+    // check near miss (within 20px)
+    const nr = ball.r + 22;
+    if(circleRect(ball.x,ball.y,nr,ob.x-4,ob.y,ob.w+8,ob.h) &&
+       !circleRect(ball.x,ball.y,ball.r+3,ob.x,ob.y,ob.w,ob.h)){
+      nearMiss = true;
+    }
+
+    // collision
+    if(circleRect(ball.x,ball.y,ball.r,ob.x,ob.y,ob.w,ob.h)){
+      triggerDeath();
+      return;
+    }
+
+    if(ob.y > H+40){
+      ob.alive = false;
+      dodged++;
+    }
+  });
+
+  // clean obstacles
+  for(let i=obstacles.length-1;i>=0;i--)
+    if(!obstacles[i].alive) obstacles.splice(i,1);
+
+  // near miss effect
+  if(nearMiss && nearMissTimer <= 0){
+    nearMissTimer = 18;
+    burst(ball.x, ball.y, 8, th.ball);
+  }
+
+  // score
+  score += speed * .15 * dt;
+  multiplier = Math.min(8, 1 + Math.floor(speed * .4));
+  const finalScore = Math.floor(score * multiplier);
+  document.getElementById('hud-score-val').textContent = finalScore;
+  const mEl = document.getElementById('multiplier');
+  if(multiplier > 1){ mEl.textContent = `×${multiplier}`; mEl.classList.add('show'); }
+  else mEl.classList.remove('show');
+
+  // particles
+  particles.forEach(p=>{ p.x+=p.vx; p.y+=p.vy; p.life-=p.decay; p.vy+=.05; });
+  for(let i=particles.length-1;i>=0;i--)
+    if(particles[i].life<=0) particles.splice(i,1);
+
+  // shake
+  if(shakeTimer>0){ shakeTimer-=dt; }
+
+  // score trail particles (occasional)
+  if(frameCount%12===0){
+    const th2=THEMES[currentTheme];
+    particles.push({
+      x:ball.x+(Math.random()-.5)*6,
+      y:ball.y+ball.r,
+      vx:(Math.random()-.5)*.6,
+      vy:.4+Math.random()*.6,
+      r:1.2, life:1, decay:.04,
+      color:th2.trail[2]||th2.trail[0], blur:6
+    });
+  }
+
+  // hint gone after first held
+  if(held) document.getElementById('hint').classList.add('gone');
+
+  // ── DRAW ──
+  ctx.save();
+  if(shakeTimer>0){
+    const sx=(Math.random()-.5)*shakeAmt;
+    const sy=(Math.random()-.5)*shakeAmt;
+    ctx.translate(sx,sy);
+  }
+
+  drawBackground();
+  drawTrail();
+  drawObstacles();
+  drawBall();
+  drawParticles();
+
+  // vignette
+  const vig = ctx.createRadialGradient(W/2,H/2,H*.3,W/2,H/2,H*.8);
+  vig.addColorStop(0,'transparent');
+  vig.addColorStop(1,'rgba(0,0,0,.55)');
+  ctx.fillStyle=vig;
+  ctx.fillRect(0,0,W,H);
+
+  ctx.restore();
+}
+
+// ── DEATH ──
+function triggerDeath(){
+  state = 'dying';
+  const th = THEMES[currentTheme];
+  burst(ball.x,ball.y,60,th.ball);
+  burst(ball.x,ball.y,30,th.obstacleGlow);
+  shake(12,25);
+
+  // flash
+  const fl = document.createElement('div');
+  fl.className='streak-flash';
+  fl.style.background=th.ball+'33';
+  app.appendChild(fl);
+  setTimeout(()=>fl.remove(),400);
+
+  // draw death frame
+  drawBackground();
+  drawTrail();
+  drawObstacles();
+  drawParticles();
+
+  setTimeout(()=>{
+    cancelAnimationFrame(raf);
+    state='over';
+
+    const finalScore = Math.floor(score * multiplier);
+    const isNew = finalScore > best;
+    if(isNew){ best = finalScore; localStorage.setItem('nd_best',best); }
+
+    document.getElementById('go-score').textContent = finalScore;
+    document.getElementById('go-score').style.color = th.scoreColor;
+    document.getElementById('go-score').style.textShadow = `0 0 20px ${th.scoreColor}`;
+    document.getElementById('go-best').textContent = best;
+    document.getElementById('go-time').textContent = Math.floor(gameTime)+'s';
+    document.getElementById('go-dodged').textContent = dodged;
+    document.getElementById('go-spd').textContent = maxSpeed.toFixed(1);
+    document.getElementById('hud-best-val').textContent = best;
+
+    const badge = document.getElementById('newBestBadge');
+    if(isNew){
+      badge.classList.remove('hidden');
+      badge.textContent='🏆 NEW BEST!';
+      badge.style.background=th.btnGrad;
+      badge.style.color='#000';
+    } else {
+      badge.classList.add('hidden');
+    }
+
+    showHUD(false);
+    showScreen('s-over');
+  }, 600);
+}
+
+// ── CONTROLS ──
+function startHold(){ held = true; }
+function stopHold(){  held = false; }
+
+canvas.addEventListener('touchstart', e=>{ e.preventDefault(); startHold(); },{ passive:false });
+canvas.addEventListener('touchend',   e=>{ e.preventDefault(); stopHold(); }, { passive:false });
+canvas.addEventListener('mousedown',  startHold);
+window.addEventListener('mouseup',    stopHold);
+
+window.addEventListener('keydown', e=>{
+  if(e.code==='Space'||e.key==='ArrowRight'||e.key==='d') startHold();
+  if(e.key==='p'||e.key==='Escape') togglePause();
+},{passive:true});
+window.addEventListener('keyup', e=>{
+  if(e.code==='Space'||e.key==='ArrowRight'||e.key==='d') stopHold();
+});
+
+// ── PAUSE ──
+function togglePause(){
+  if(state==='play'){
+    state='pause';
+    cancelAnimationFrame(raf);
+    showScreen('s-pause');
+  }
+}
+
+document.getElementById('pauseBtn').addEventListener('click',togglePause);
+document.getElementById('btnResume').addEventListener('click',()=>{
+  state='play';
+  showScreen(null);
+  lastTime=performance.now();
+  raf=requestAnimationFrame(gameLoop);
+});
+document.getElementById('btnMenuFromPause').addEventListener('click',()=>{
+  cancelAnimationFrame(raf);
+  state='menu';
+  showHUD(false);
+  showScreen('s-menu');
+});
+
+// ── THEME PICKER ──
+document.querySelectorAll('.theme-dot').forEach(dot=>{
+  dot.addEventListener('click',()=>{
+    document.querySelectorAll('.theme-dot').forEach(d=>d.classList.remove('active'));
+    dot.classList.add('active');
+    applyTheme(dot.dataset.t);
+  });
+});
+
+// ── MENU BUTTONS ──
+document.getElementById('btnPlay').addEventListener('click',()=>{
+  showScreen(null);
+  showHUD(true);
+  initGame();
+  state='play';
+  lastTime=performance.now();
+  raf=requestAnimationFrame(gameLoop);
+});
+
+document.getElementById('btnHowTo').addEventListener('click',()=>showScreen('s-how'));
+document.getElementById('btnHowBack').addEventListener('click',()=>showScreen('s-menu'));
+
+document.getElementById('btnRetry').addEventListener('click',()=>{
+  showScreen(null);
+  showHUD(true);
+  initGame();
+  state='play';
+  lastTime=performance.now();
+  raf=requestAnimationFrame(gameLoop);
+});
+
+document.getElementById('btnMenuFromOver').addEventListener('click',()=>{
+  state='menu';
+  showHUD(false);
+  showScreen('s-menu');
+  // draw static menu bg
+  applyTheme(currentTheme);
+  drawBackground();
+});
+
+// ── INIT ──
+applyTheme('cyber');
+initStars();
+initGrid();
+// draw a static background on menu
+function menuBgLoop(){
+  if(state!=='menu'&&state!=='dying') return;
+  frameCount++;
+  drawBackground();
+  requestAnimationFrame(menuBgLoop);
+}
+state='menu';
+menuBgLoop();
+showScreen('s-menu');
+
+})();
+</script>
+</body>
+</html>
