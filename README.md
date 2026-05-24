@@ -15,9 +15,7 @@ A premium synthwave endless arcade game. Dodge neon obstacles and survive as lon
 - 🔴 Blood Moon
 
 ## Deploy to Vercel
-1. Upload files to GitHub
-2. Import repo at vercel.com
-3. Framework Preset → **Other**
-4. Deploy ✅
+
+ Deploy ✅
 
 No backend, no config needed. Pure HTML.
